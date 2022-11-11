@@ -3,7 +3,19 @@ import { ref, computed, watch } from 'vue';
 import MyButton from './components/MyButton.vue';
 import MOVIES from './assets/movies.json';
 
-const movies = MOVIES.slice(); // clone input array
+// TIP: when we clone the input array,
+// we can use a map function instead of .slice()
+// and perform data changes if needed!
+const movies = MOVIES
+  .map(movie => {
+    // Object.assign into a new object ({}) is the way to clone objects in JS (sorry about that!)
+    return Object.assign({}, movie, {
+      score: Number(movie.score),
+      // HINT: we can normalize here the genre of each movie, for Level 5 of this challenge ;)
+    });
+  });
+
+// reactive vars
 const itemsPerPage = ref(5);
 const page = ref(1);
 const yearsSelected = ref([]);
@@ -24,35 +36,37 @@ function filterByYear(movie) {
 }
 
 function filterByTitle(movie) {
-  if(filterTitle.value.length < 2) return true;
+  if (filterTitle.value.length < 2) return true;
   const lowerCaseTitle = filterTitle.value.toLowerCase();
   return movie.title.toLowerCase().includes(lowerCaseTitle);
 }
 
 function avergageScore(list) {
   const sum = list
-    .map(m => Number(m.score))
+    .map(m => m.score)
     .reduce((a, b) => a + b, 0);
   return (sum /list.length) || 0;
 }
+
 const filterMoviesAverageScore = computed(() => {
   return avergageScore(filteredMovies.value);
-})
+});
 
 const totalAverageScore = computed(() => {
   return avergageScore(movies);
-})
+});
 
 const currentPageMoviesAverageScore = computed(() => {
   return avergageScore(moviesSnapshot.value);
-})
+});
+
 const filteredMovies = computed(() => {
   const fm = movies
     .filter(filterByYear)
     .filter(filterByTitle);
 
     fm.sort((movie1, movie2) => {
-      return Number(movie2.score) - Number(movie1.score);
+      return movie2.score - movie1.score;
     })
     return fm;
 });
@@ -69,8 +83,15 @@ const totalPages = computed(() => {
   return Math.ceil(filteredMovies.value.length / itemsPerPage.value);
 });
 
-watch(itemsPerPage, () => {
+// TIP: we can watch on multiple reactive variables at the same time :)
+watch([itemsPerPage, yearsSelected], () => {
   page.value = 1;
+});
+
+watch(filterTitle, (newValue) => {
+  if (newValue.length >= 2) {
+    page.value = 1;
+  }
 });
 
 </script>
@@ -79,7 +100,7 @@ watch(itemsPerPage, () => {
   <input type="number" v-model="itemsPerPage" /> <br/>
   filter avergage score: {{ filterMoviesAverageScore }}<br/>
   current page avg score: {{currentPageMoviesAverageScore}}<br/>
-  total score: {{ totalAverageScore }}<br/>
+  total avg score: {{ totalAverageScore }}<br/>
   <ul>
     <li
       v-for="movie in moviesSnapshot"
@@ -116,6 +137,7 @@ watch(itemsPerPage, () => {
   <input v-model="filterTitle" type="text" />
   <br/><br/>
   <select v-model="yearsSelected" multiple>
+      <!-- TODO: use v-for to generate, but careful do not repeat years! -->
       <option>1999</option>
       <option>2015</option>
       <option>2022</option>
